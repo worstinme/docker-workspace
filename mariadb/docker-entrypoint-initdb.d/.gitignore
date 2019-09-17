@@ -1,0 +1,2 @@
+*.sql
+!../../../_docker_local/mariadb-entrypoint/db.sql
