@@ -9,7 +9,7 @@ networks:
 services:
   &backend-service backend: &backend-service-template
     build:
-      context: ./docker/php
+      context: ./_docker/php
       dockerfile: Dockerfile
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     volumes:
@@ -62,7 +62,7 @@ services:
       - frontend-network
   nginx:
     build:
-      context: ./docker/nginx
+      context: ./_docker/nginx
       dockerfile: Dockerfile
       args:
         - PHP_UPSTREAM_CONTAINER=php-fpm
@@ -73,8 +73,8 @@ services:
     volumes:
       - ${BACKEND_PATH}:/var/www:ro
       - ${DATA_PATH}/nginx/logs:/var/log/nginx
-      - ./docker/nginx/sites:/etc/nginx/sites-available
-      - ./docker/nginx/ssl:/etc/nginx/ssl
+      - ./_docker/nginx/sites:/etc/nginx/sites-available
+      - ./_docker/nginx/ssl:/etc/nginx/ssl
     ports:
       - "${PROJECT_HOST}:80:80"
       - "${PROJECT_HOST}:443:443"
@@ -108,7 +108,7 @@ services:
   quasar:
     build:
       context: ./
-      dockerfile: ./docker/quasar/Dockerfile
+      dockerfile: ./_docker/quasar/Dockerfile
     volumes:
       - '${QUASAR_PATH}:/app:cached'
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
@@ -119,4 +119,23 @@ services:
       - ${PROJECT_HOST}:3000:3000
     command: /bin/sh -c "yarn && quasar dev -m ssr"
     networks:
+      - frontend-network
+      -
+  mariadb:
+    image: mariadb:5.5
+    environment:
+      MYSQL_DATABASE: default
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: default
+      MYSQL_PASSWORD: secret
+    ports:
+      - "${PROJECT_HOST_IP}:3306:3306"
+    volumes:
+      - ./_docker/mariadb/config:/etc/mysql/conf.d
+      - ./_docker/mariadb/data/${BRANCH}:/var/lib/mysql
+      - ./_docker/mariadb/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    command:
+      mysqld --innodb-flush-method=littlesync --innodb-use-native-aio=OFF --log_bin=ON
+    networks:
+      - backend-network
       - frontend-network
