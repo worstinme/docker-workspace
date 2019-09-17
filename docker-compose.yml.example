@@ -1,0 +1,122 @@
+version: '3.3'
+
+networks:
+  backend-network:
+    driver: bridge
+  frontend-network:
+    driver: bridge
+
+services:
+  &backend-service backend: &backend-service-template
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    volumes:
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - ${BACKEND_PATH}:/var/www:rw
+      - ${DATA_PATH}/home-dir:/home/user
+    hostname: *backend-service
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: &redis-port 6379
+      DB_HOST: postgres
+      DB_PORT: &pg-port 5432
+      DB_DATABASE: &pg-db-name app
+      DB_USERNAME: &pg-username forge
+      DB_PASSWORD: &pg-password secret
+      SCHEDULE_PERIOD: 60
+      FPM_PORT: &php-fpm-port 9000
+      FPM_USER: "${USER_ID:-1000}"
+      FPM_GROUP: "${GROUP_ID:-1000}"
+      APP_ENV: local
+      APP_DEBUG: 'true'
+      HOME: /home/user
+    command: keep-alive.sh
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - backend-network
+
+  &queue-service queue:
+    <<: *backend-service-template
+    hostname: *queue-service
+    command: php artisan queue:work
+
+  &scheduler-service scheduler:
+    <<: *backend-service-template
+    hostname: *scheduler-service
+    command: scheduler.sh "php /var/www/artisan schedule:run"
+
+  &php-fpm-service php-fpm:
+    <<: *backend-service-template
+    user: 'root:root'
+    hostname: *php-fpm-service
+    ports: [*php-fpm-port]
+    entrypoint: /fpm-entrypoint.sh
+    command: php-fpm --nodaemonize -d "opcache.enable=0" -d "display_startup_errors=On" -d "display_errors=On" -d "error_reporting=E_ALL"
+    networks:
+      - backend-network
+      - frontend-network
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+      args:
+        - PHP_UPSTREAM_CONTAINER=php-fpm
+        - PHP_UPSTREAM_PORT=9000
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    volumes:
+      - ${BACKEND_PATH}:/var/www:ro
+      - ${DATA_PATH}/nginx/logs:/var/log/nginx
+      - ./docker/nginx/sites:/etc/nginx/sites-available
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    ports:
+      - "${PROJECT_HOST}:80:80"
+      - "${PROJECT_HOST}:443:443"
+    depends_on:
+      - *php-fpm-service
+      - quasar
+    networks:
+      - frontend-network
+
+  redis:
+    image: redis:5.0.5-alpine
+    command: redis-server
+    volumes:
+      - ${DATA_PATH}/redis:/data:rw
+    ports: [*redis-port, '${PROJECT_HOST}:16379:6379'] # Port 16379 for connecting from localhost
+    networks:
+      - backend-network
+
+  postgres:
+    image: postgres:11-alpine
+    environment:
+      POSTGRES_DB: *pg-db-name
+      POSTGRES_USER: *pg-username
+      POSTGRES_PASSWORD: *pg-password
+    volumes:
+      - ${DATA_PATH}/postgres:/var/lib/postgresql:z
+    ports: [*pg-port, '${PROJECT_HOST}:5432:5432'] # Port 15432 for connecting from localhost using, for example, data-grip
+    networks:
+      - backend-network
+      - frontend-network
+  quasar:
+    build:
+      context: ./
+      dockerfile: ./docker/quasar/Dockerfile
+    volumes:
+      - '${QUASAR_PATH}:/app:cached'
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    environment:
+      HOME: /home/user
+      QUASAR_PATH: ${QUASAR_PATH}
+    ports:
+      - ${PROJECT_HOST}:3000:3000
+    command: /bin/sh -c "yarn && quasar dev -m ssr"
+    networks:
+      - frontend-network
