@@ -5,6 +5,11 @@ networks:
     driver: bridge
   frontend-network:
     driver: bridge
+volumes:
+  redis-data:
+  maria-data:
+  pg-data:
+  home-dir:
 
 services:
   &backend-service backend: &backend-service-template
@@ -16,7 +21,7 @@ services:
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
       - ${BACKEND_PATH}:/var/www:rw
-      - ${DATA_PATH}/home-dir:/home/user
+      - home-dir:/home/user
     hostname: *backend-service
     environment:
       REDIS_HOST: redis
@@ -88,7 +93,7 @@ services:
     image: redis:5.0.5-alpine
     command: redis-server
     volumes:
-      - ${DATA_PATH}/redis:/data:rw
+      - redis-data:/data:rw
     ports: [*redis-port, '${PROJECT_HOST}:16379:6379'] # Port 16379 for connecting from localhost
     networks:
       - backend-network
@@ -100,7 +105,7 @@ services:
       POSTGRES_USER: *pg-username
       POSTGRES_PASSWORD: *pg-password
     volumes:
-      - ${DATA_PATH}/postgres:/var/lib/postgresql:z
+      - pg-data:/var/lib/postgresql:rw
     ports: [*pg-port, '${PROJECT_HOST}:5432:5432'] # Port 15432 for connecting from localhost using, for example, data-grip
     networks:
       - backend-network
@@ -120,7 +125,7 @@ services:
     command: /bin/sh -c "yarn && quasar dev -m ssr"
     networks:
       - frontend-network
-      -
+
   mariadb:
     image: mariadb:5.5
     environment:
@@ -129,10 +134,10 @@ services:
       MYSQL_USER: default
       MYSQL_PASSWORD: secret
     ports:
-      - "${PROJECT_HOST_IP}:3306:3306"
+      - "${PROJECT_HOST}:3306:3306"
     volumes:
       - ./_docker/mariadb/config:/etc/mysql/conf.d
-      - ./_docker/mariadb/data/${BRANCH}:/var/lib/mysql
+      - maria-data:/var/lib/mysql:rw
       - ./_docker/mariadb/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     command:
       mysqld --innodb-flush-method=littlesync --innodb-use-native-aio=OFF --log_bin=ON

@@ -1,2 +1,2 @@
-/data/*
-!/data/.keep
+/nginx/logs/*
+!/nginx/logs/.keep
