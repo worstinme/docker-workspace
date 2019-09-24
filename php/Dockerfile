@@ -6,7 +6,6 @@ ENV PS1='\[\033[1;32m\]🐳  \[\033[1;36m\][\u@\h] \[\033[1;34m\]\w\[\033[0;35m\
 ENV COMPOSER_VERSION 1.9.0
 ## Looked here: <https://github.com/prooph/docker-files/blob/master/php/7.2-cli>
 ENV PHP_REDIS_VERSION 5.0.2
-ENV PHP_XDEBUG_VERSION 2.7.2
 
 # persistent / runtime deps
 ENV PHPIZE_DEPS \
@@ -65,6 +64,7 @@ RUN set -xe \
     && docker-php-ext-configure soap --enable-soap \
     && docker-php-ext-configure opcache --enable-opcache \
     && docker-php-ext-install -j$(nproc) \
+        zip \
         gd \
         bcmath \
         intl \
@@ -96,8 +96,7 @@ opcache.enable_cli=1\n\
 opcache.enable=1\n" > /usr/local/etc/php/conf.d/opcache.ini
 
 # For phpunit coverage
-RUN pecl install xdebug-${PHP_XDEBUG_VERSION} \
-    && git clone --branch ${PHP_REDIS_VERSION} https://github.com/phpredis/phpredis /tmp/phpredis \
+RUN git clone --branch ${PHP_REDIS_VERSION} https://github.com/phpredis/phpredis /tmp/phpredis \
         && cd /tmp/phpredis \
         && phpize  \
         && ./configure  \
@@ -120,20 +119,20 @@ COPY ./etc/php/php.ini /usr/local/etc/php/php.ini
 COPY ./etc/php/php-fpm.conf /usr/local/etc/php-fpm.conf
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
-ENV COMPOSER_HOME /tmp
+ENV COMPOSER_HOME /home/user
 ENV PATH /scripts:/scripts/aliases:$PATH
 
 RUN set -xe \
     && mkdir -p "$COMPOSER_HOME" \
     # install composer
-    && php -r "copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');" \
-    && php -r "if(hash_file('SHA384','/tmp/composer-setup.php')==='a5c698ffe4b8e849a443b120cd5ba38043260d5c4023db'.\
-    'f93e1558871f1f07f58274fc6f4c93bcfd858c6bd0775cd8d1'){echo 'Verified';}else{unlink('/tmp/composer-setup.php');}" \
-    && php /tmp/composer-setup.php --no-ansi --install-dir=/usr/bin --filename=composer --version=$COMPOSER_VERSION \
+    && php -r "copy('https://getcomposer.org/installer', '/home/user/composer-setup.php');" \
+    && php -r "if(hash_file('SHA384','/home/user/composer-setup.php')==='a5c698ffe4b8e849a443b120cd5ba38043260d5c4023db'.\
+    'f93e1558871f1f07f58274fc6f4c93bcfd858c6bd0775cd8d1'){echo 'Verified';}else{unlink('/home/user/composer-setup.php');}" \
+    && php /home/user/composer-setup.php --no-ansi --install-dir=/usr/bin --filename=composer --version=$COMPOSER_VERSION \
     && composer --ansi --version --no-interaction \
     && composer --no-interaction global require 'hirak/prestissimo' \
     && composer clear-cache \
-    && rm -rf /tmp/composer-setup.php /tmp/.htaccess \
+    && rm -rf /home/user/composer-setup.php /home/user/.htaccess \
     # show php info
     && php -v \
     && php-fpm -v \
