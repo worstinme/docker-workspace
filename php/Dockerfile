@@ -42,7 +42,8 @@ RUN apk add --no-cache --virtual .persistent-deps \
     # for intl extension
     libintl gettext-dev libxslt \
     # etc
-    bash nano
+    bash \
+    nano
 
 RUN set -xe \
     # workaround for rabbitmq linking issue
