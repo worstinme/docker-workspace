@@ -46,8 +46,8 @@ RUN apk add --no-cache --virtual .persistent-deps \
     nano
 
 RUN apk add --no-cache libpng-dev zlib-dev libzip-dev \
-&& docker-php-ext-configure zip --with-libzip \
-&& docker-php-ext-install zip
+    && docker-php-ext-configure zip --with-libzip \
+    && docker-php-ext-install zip
 
 RUN set -xe \
     # workaround for rabbitmq linking issue
