@@ -1,4 +1,4 @@
-FROM php:7.2-fpm-alpine
+FROM php:7.3.11-fpm-alpine
 LABEL Description="Application container"
 
 ENV PS1='\[\033[1;32m\]🐳  \[\033[1;36m\][\u@\h] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
@@ -44,6 +44,10 @@ RUN apk add --no-cache --virtual .persistent-deps \
     # etc
     bash \
     nano
+
+RUN apk add --no-cache libpng-dev zlib-dev libzip-dev \
+&& docker-php-ext-configure zip --with-libzip \
+&& docker-php-ext-install zip
 
 RUN set -xe \
     # workaround for rabbitmq linking issue
