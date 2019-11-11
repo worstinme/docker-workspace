@@ -143,6 +143,8 @@ RUN set -xe \
     && php-fpm -v \
     && php -m
 
+RUN apk update && apk add bash && apk add git
+
 COPY ./keep-alive.sh /scripts/keep-alive.sh
 COPY ./scheduler.sh /scripts/scheduler.sh
 COPY ./fpm-entrypoint.sh /fpm-entrypoint.sh
