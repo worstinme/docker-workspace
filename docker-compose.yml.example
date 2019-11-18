@@ -16,6 +16,8 @@ services:
     build:
       context: ./_docker/php
       dockerfile: Dockerfile
+      args:
+        - PHP_VERSION=${PHP_VERSION}
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     volumes:
       - /etc/passwd:/etc/passwd:ro
