@@ -1,0 +1,183 @@
+version: '3.3'
+
+networks:
+  backend-network:
+    driver: bridge
+  frontend-network:
+    driver: bridge
+volumes:
+  redis-data:
+  maria-data:
+  pg-data:
+  home-dir:
+
+services:
+  &php-service php: &php-service-template
+    build:
+      context: ./_docker/php
+      dockerfile: Dockerfile
+      args:
+        - PHP_VERSION=${PHP_VERSION}
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    volumes:
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - ${PHP_PATH}:/var/www:rw
+      - home-dir:/home/user
+    hostname: *php-service
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: &redis-port 6379
+      DB_HOST: postgres
+      DB_PORT: &pg-port 5432
+      DB_DATABASE: &pg-db-name app
+      DB_USERNAME: &pg-username forge
+      DB_PASSWORD: &pg-password secret
+      SCHEDULE_PERIOD: 60
+      FPM_PORT: &php-fpm-port 9000
+      FPM_USER: "${USER_ID:-1000}"
+      FPM_GROUP: "${GROUP_ID:-1000}"
+      APP_ENV: local
+      APP_DEBUG: 'true'
+      HOME: /home/user
+    #command: keep-alive.sh
+    #command: keep-alive.sh "php /var/www/init --env=Docker --overwrite=y" "php /var/www/yii migrate --interactive=0"
+    depends_on:
+      - redis
+      - postgres
+      - mariadb
+      - memcached
+    networks:
+      - backend-network
+  &queue-service queue:
+    <<: *php-service-template
+    hostname: *queue-service
+    command: php artisan queue:work
+
+  &scheduler-service scheduler:
+    <<: *php-service-template
+    hostname: *scheduler-service
+    #command: scheduler.sh "php /var/www/artisan schedule:run"
+    #command: scheduler.sh "php /var/www/yii schedule/run --scheduleFile=@app/config/schedule.php"
+  &php-fpm-service php-fpm:
+    <<: *php-service-template
+    user: 'root:root'
+    hostname: *php-fpm-service
+    ports: [*php-fpm-port]
+    entrypoint: /fpm-entrypoint.sh
+    command: php-fpm --nodaemonize -d "opcache.enable=0" -d "display_startup_errors=On" -d "display_errors=On" -d "error_reporting=E_ALL"
+    networks:
+      - backend-network
+      - frontend-network
+  nginx:
+    build:
+      context: ./_docker/nginx
+      dockerfile: Dockerfile
+      args:
+        - PHP_UPSTREAM_CONTAINER=php-fpm
+        - PHP_UPSTREAM_PORT=9000
+    volumes:
+      - ${PHP_PATH}:/var/www:ro
+      - ./_docker/nginx/logs:/var/log/nginx
+      - ./_docker/nginx/sites:/etc/nginx/sites-available
+      - ./_docker/nginx/ssl:/etc/nginx/ssl
+    ports:
+      - "${PROJECT_HOST}:80:80"
+      - "${PROJECT_HOST}:443:443"
+    depends_on:
+      - *php-fpm-service
+      - node
+    networks:
+      - frontend-network
+  redis:
+    image: redis:5.0.5-alpine
+    command: redis-server
+    volumes:
+      - redis-data:/data:rw
+    ports: [*redis-port, '${PROJECT_HOST}:16379:6379'] # Port 16379 for connecting from localhost
+    networks:
+      - backend-network
+      - frontend-network
+  postgres:
+    image: postgres:11-alpine
+    environment:
+      POSTGRES_DB: *pg-db-name
+      POSTGRES_USER: *pg-username
+      POSTGRES_PASSWORD: *pg-password
+    volumes:
+      - pg-data:/var/lib/postgresql:rw
+    ports: [*pg-port, '${PROJECT_HOST}:5432:5432'] # Port 15432 for connecting from localhost using, for example, data-grip
+    networks:
+      - backend-network
+      - frontend-network
+  node:
+    build:
+      context: ./
+      dockerfile: ./_docker/node/Dockerfile
+    volumes:
+      - '${NODE_PATH}:/app:cached'
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    environment:
+      HOME: /home/user
+      NODE_PATH: ${NODE_PATH}
+    ports:
+      - ${PROJECT_HOST}:3000:3000
+    command: /bin/sh -c "yarn && quasar dev -m ssr"
+    networks:
+      - frontend-network
+  adminer:
+    image: adminer:4
+    networks:
+      - backend-network
+      - frontend-network
+    ports:
+      - "${PROJECT_HOST}:8080:8080"
+  mariadb:
+    image: mariadb:5.5
+    environment:
+      MYSQL_DATABASE: default
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: default
+      MYSQL_PASSWORD: secret
+    ports:
+      - "${PROJECT_HOST}:3306:3306"
+    volumes:
+      - ./_docker/mariadb/config:/etc/mysql/conf.d
+      - maria-data:/var/lib/mysql:rw
+      - ./_docker_local/mariadb/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    command:
+      mysqld --innodb-flush-method=littlesync --innodb-use-native-aio=OFF --log_bin=ON
+    networks:
+      - backend-network
+      - frontend-network
+  memcached:
+    build: ./_docker/memcached
+    volumes:
+      - ./_docker_local/memcached/data/:/var/lib/memcached
+  selenium-hub:
+    build: ./_docker/selenium-hub
+    container_name: selenium-hub
+    networks:
+      - backend-network
+  chrome:
+    image: selenium/node-chrome:3.141.59-titanium
+    volumes:
+      - ./_docker_local/selenium/data/chrome/:/dev/shm
+    depends_on:
+      - selenium-hub
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+    networks:
+      - backend-network
+  firefox:
+    image: selenium/node-firefox:3.141.59-titanium
+    volumes:
+      - ./_docker_local/selenium/data/chrome/:/dev/shm
+    depends_on:
+      - selenium-hub
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+    networks:
+      - backend-network
