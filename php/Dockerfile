@@ -132,8 +132,6 @@ RUN set -xe \
     && mkdir -p "$COMPOSER_HOME" \
     # install composer
     && php -r "copy('https://getcomposer.org/installer', '/home/user/composer-setup.php');" \
-    && php -r "if(hash_file('SHA384','/home/user/composer-setup.php')==='a5c698ffe4b8e849a443b120cd5ba38043260d5c4023db'.\
-    'f93e1558871f1f07f58274fc6f4c93bcfd858c6bd0775cd8d1'){echo 'Verified';}else{unlink('/home/user/composer-setup.php');}" \
     && php /home/user/composer-setup.php --no-ansi --install-dir=/usr/bin --filename=composer --version=$COMPOSER_VERSION \
     && composer --ansi --version --no-interaction \
     && composer --no-interaction global require 'hirak/prestissimo' \
