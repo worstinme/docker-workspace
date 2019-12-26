@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 SCHEDULE_COMMAND="${1:-echo 'scheduler ticked'}";
 FIRST_START_DELAY="${FIRST_START_DELAY:-2}";

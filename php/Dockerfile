@@ -149,6 +149,8 @@ COPY ./scheduler.sh /scripts/scheduler.sh
 COPY ./fpm-entrypoint.sh /fpm-entrypoint.sh
 COPY ./aliases/* /scripts/aliases/
 
+RUN chmod +x -R /scripts/
+
 WORKDIR /var/www
 ENTRYPOINT []
 CMD []
