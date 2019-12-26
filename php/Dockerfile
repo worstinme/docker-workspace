@@ -150,6 +150,7 @@ COPY ./fpm-entrypoint.sh /fpm-entrypoint.sh
 COPY ./aliases/* /scripts/aliases/
 
 RUN chmod +x -R /scripts/
+RUN chmod +x /fpm-entrypoint.sh
 
 WORKDIR /var/www
 ENTRYPOINT []
