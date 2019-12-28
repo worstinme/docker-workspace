@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 SLEEP_DELAY="${SLEEP_DELAY:-1}";
 
