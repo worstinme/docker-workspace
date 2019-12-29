@@ -147,10 +147,12 @@ RUN apk update && apk add bash && apk add git
 COPY ./keep-alive.sh /scripts/keep-alive.sh
 COPY ./scheduler.sh /scripts/scheduler.sh
 COPY ./fpm-entrypoint.sh /fpm-entrypoint.sh
+COPY ./wait-for-it.sh /wait-for-it.sh
 COPY ./aliases/* /scripts/aliases/
 
 RUN chmod +x -R /scripts/
 RUN chmod +x /fpm-entrypoint.sh
+RUN chmod +x /wait-for-it.sh
 
 WORKDIR /var/www
 ENTRYPOINT []
