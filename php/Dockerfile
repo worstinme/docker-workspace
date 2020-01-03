@@ -18,14 +18,16 @@ ENV PHPIZE_DEPS \
     libc-dev \
     pcre-dev \
     make \
-    git \
     pkgconf \
     re2c \
     # for GD
     freetype-dev \
     libpng-dev  \
     libjpeg-turbo-dev \
-    libxslt-dev
+    libxslt-dev \
+    zlib-dev \
+    libzip-dev \
+    cyrus-sasl-dev
 
 RUN apk add --no-cache --virtual .persistent-deps \
     # for intl extension
@@ -44,11 +46,8 @@ RUN apk add --no-cache --virtual .persistent-deps \
     libintl gettext-dev libxslt \
     # etc
     bash \
-    nano
-
-RUN apk add --no-cache libpng-dev zlib-dev libzip-dev \
-    && docker-php-ext-configure zip --with-libzip \
-    && docker-php-ext-install zip
+    nano \
+    git
 
 RUN set -xe \
     # workaround for rabbitmq linking issue
@@ -68,6 +67,7 @@ RUN set -xe \
     && docker-php-ext-configure pdo_pgsql --with-pgsql \
     && docker-php-ext-configure mbstring --enable-mbstring \
     && docker-php-ext-configure soap --enable-soap \
+    && docker-php-ext-configure zip --with-libzip \
     && docker-php-ext-configure opcache --enable-opcache \
     && docker-php-ext-install -j$(nproc) \
         zip \
@@ -103,14 +103,13 @@ opcache.enable=1\n" > /usr/local/etc/php/conf.d/opcache.ini
 
 # For phpunit coverage
 RUN git clone --branch ${PHP_REDIS_VERSION} https://github.com/phpredis/phpredis /tmp/phpredis \
-        && cd /tmp/phpredis \
-        && phpize  \
-        && ./configure  \
-        && make  \
-        && make install \
-        && make test \
-        && echo 'extension=redis.so' > /usr/local/etc/php/conf.d/redis.ini \
-    && apk del .build-deps \
+    && cd /tmp/phpredis \
+    && phpize  \
+    && ./configure  \
+    && make  \
+    && make install \
+    && make test \
+    && echo 'extension=redis.so' > /usr/local/etc/php/conf.d/redis.ini \
     && rm -rf /tmp/* \
     && rm -rf /scripts \
     && mkdir /scripts \
@@ -143,6 +142,21 @@ RUN set -xe \
     && php -m
 
 RUN apk update && apk add bash && apk add git
+
+ARG INSTALL_MEMCACHED=false
+ENV MEMCACHED_DEPS libmemcached-dev
+RUN if [ ${INSTALL_MEMCACHED} = true ]; then \
+    apk add --no-cache --update libmemcached-libs zlib \
+    && apk add --no-cache --update --virtual .memcached-deps $MEMCACHED_DEPS \
+    && set -xe \
+    && pecl install memcached \
+    && echo "extension=memcached.so" > /usr/local/etc/php/conf.d/20_memcached.ini \
+    && rm -rf /usr/share/php7 \
+    && rm -rf /tmp/* \
+    && apk del .memcached-deps \
+;fi
+
+RUN apk del .build-deps
 
 COPY ./keep-alive.sh /scripts/keep-alive.sh
 COPY ./scheduler.sh /scripts/scheduler.sh
