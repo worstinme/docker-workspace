@@ -106,8 +106,8 @@ RUN git clone --branch ${PHP_REDIS_VERSION} https://github.com/phpredis/phpredis
         && make install \
         && make test \
         && echo 'extension=redis.so' > /usr/local/etc/php/conf.d/redis.ini
-RUN apk del .build-deps \
-    && rm -rf /tmp/* \
+
+RUN rm -rf /tmp/* \
     && rm -rf /scripts \
     && mkdir /scripts \
     && mkdir -p /scripts/aliases \
@@ -137,8 +137,6 @@ RUN set -xe \
     && php -v \
     && php-fpm -v \
     && php -m
-
-RUN apk update && apk add bash && apk add git
 
 ARG INSTALL_MEMCACHED=false
 ENV MEMCACHED_DEPS libmemcached-dev
