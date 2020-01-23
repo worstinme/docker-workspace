@@ -18,6 +18,7 @@ services:
       dockerfile: Dockerfile
       args:
         - PHP_VERSION=${PHP_VERSION}
+        - INSTALL_MEMCACHED=${PHP_INSTALL_MEMCACHED}
     user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     volumes:
       - /etc/passwd:/etc/passwd:ro
