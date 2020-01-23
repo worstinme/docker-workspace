@@ -1,12 +1,8 @@
 ARG PHP_VERSION
 FROM php:${PHP_VERSION}-fpm-alpine
 LABEL Description="Application container"
-
-ENV PS1='\[\033[1;32m\]🐳  \[\033[1;36m\][\u@\h] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
-
-ENV COMPOSER_VERSION 1.9.0
 ## Looked here: <https://github.com/prooph/docker-files/blob/master/php/7.2-cli>
-ENV PHP_REDIS_VERSION 5.0.2
+ENV PS1='\[\033[1;32m\]  \[\033[1;36m\][\u@\h] \[\033[1;34m\]\w\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
 
 # persistent / runtime deps
 ENV PHPIZE_DEPS \
@@ -101,7 +97,7 @@ opcache.fast_shutdown=1\n\
 opcache.enable_cli=1\n\
 opcache.enable=1\n" > /usr/local/etc/php/conf.d/opcache.ini
 
-# For phpunit coverage
+ENV PHP_REDIS_VERSION 5.1.1
 RUN git clone --branch ${PHP_REDIS_VERSION} https://github.com/phpredis/phpredis /tmp/phpredis \
         && cd /tmp/phpredis \
         && phpize  \
@@ -109,8 +105,8 @@ RUN git clone --branch ${PHP_REDIS_VERSION} https://github.com/phpredis/phpredis
         && make  \
         && make install \
         && make test \
-        && echo 'extension=redis.so' > /usr/local/etc/php/conf.d/redis.ini \
-    && apk del .build-deps \
+        && echo 'extension=redis.so' > /usr/local/etc/php/conf.d/redis.ini
+RUN apk del .build-deps \
     && rm -rf /tmp/* \
     && rm -rf /scripts \
     && mkdir /scripts \
@@ -124,10 +120,10 @@ RUN git clone --branch ${PHP_REDIS_VERSION} https://github.com/phpredis/phpredis
 COPY ./etc/php/php.ini /usr/local/etc/php/php.ini
 COPY ./etc/php/php-fpm.conf /usr/local/etc/php-fpm.conf
 
+ENV PATH /scripts:/scripts/aliases:$PATH
 ENV COMPOSER_ALLOW_SUPERUSER 1
 ENV COMPOSER_HOME /home/user
-ENV PATH /scripts:/scripts/aliases:$PATH
-
+ENV COMPOSER_VERSION 1.9.0
 RUN set -xe \
     && mkdir -p "$COMPOSER_HOME" \
     # install composer
