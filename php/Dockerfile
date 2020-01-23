@@ -20,10 +20,7 @@ ENV PHPIZE_DEPS \
     freetype-dev \
     libpng-dev  \
     libjpeg-turbo-dev \
-    libxslt-dev \
-    zlib-dev \
-    libzip-dev \
-    cyrus-sasl-dev
+    libxslt-dev
 
 RUN apk add --no-cache --virtual .persistent-deps \
     # for intl extension
@@ -45,6 +42,10 @@ RUN apk add --no-cache --virtual .persistent-deps \
     nano \
     git
 
+RUN apk add --no-cache libpng-dev zlib-dev libzip-dev \
+    && docker-php-ext-configure zip --with-libzip \
+    && docker-php-ext-install zip
+
 RUN set -xe \
     # workaround for rabbitmq linking issue
     && ln -s /usr/lib /usr/local/lib64 \
@@ -63,7 +64,6 @@ RUN set -xe \
     && docker-php-ext-configure pdo_pgsql --with-pgsql \
     && docker-php-ext-configure mbstring --enable-mbstring \
     && docker-php-ext-configure soap --enable-soap \
-    && docker-php-ext-configure zip --with-libzip \
     && docker-php-ext-configure opcache --enable-opcache \
     && docker-php-ext-install -j$(nproc) \
         zip \
