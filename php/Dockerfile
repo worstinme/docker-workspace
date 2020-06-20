@@ -20,7 +20,8 @@ ENV PHPIZE_DEPS \
     freetype-dev \
     libpng-dev  \
     libjpeg-turbo-dev \
-    libxslt-dev
+    libxslt-dev \
+    cyrus-sasl-dev
 
 RUN apk add --no-cache --virtual .persistent-deps \
     # for intl extension
@@ -29,6 +30,8 @@ RUN apk add --no-cache --virtual .persistent-deps \
     postgresql-dev \
     # for soap
     libxml2-dev \
+    libzip-dev \
+    zip \
     # for GD
     freetype \
     libpng \
@@ -96,6 +99,9 @@ opcache.revalidate_freq=60\n\
 opcache.fast_shutdown=1\n\
 opcache.enable_cli=1\n\
 opcache.enable=1\n" > /usr/local/etc/php/conf.d/opcache.ini
+
+RUN apk add --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/testing gnu-libiconv
+ENV LD_PRELOAD /usr/lib/preloadable_libiconv.so php
 
 ENV PHP_REDIS_VERSION 5.1.1
 RUN git clone --branch ${PHP_REDIS_VERSION} https://github.com/phpredis/phpredis /tmp/phpredis \
