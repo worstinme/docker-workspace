@@ -46,7 +46,7 @@ RUN apk add --no-cache --virtual .persistent-deps \
     git
 
 RUN apk add --no-cache libpng-dev zlib-dev libzip-dev \
-    && docker-php-ext-configure zip --with-libzip \
+    && docker-php-ext-configure zip \
     && docker-php-ext-install zip
 
 RUN set -xe \
@@ -55,20 +55,17 @@ RUN set -xe \
     && apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
     && docker-php-ext-configure gd \
-        --with-gd \
-        --with-freetype-dir=/usr/include/ \
-        --with-png-dir=/usr/include/ \
-        --with-jpeg-dir=/usr/include/ \
+        --with-freetype --with-jpeg \
     && docker-php-ext-configure bcmath --enable-bcmath \
     && docker-php-ext-configure intl --enable-intl \
     && docker-php-ext-configure pcntl --enable-pcntl \
     && docker-php-ext-configure mysqli --with-mysqli \
     && docker-php-ext-configure pdo_mysql --with-pdo-mysql \
-    && docker-php-ext-configure pdo_pgsql --with-pgsql \
-    && docker-php-ext-configure mbstring --enable-mbstring \
+    && docker-php-ext-configure pdo_pgsql \
     && docker-php-ext-configure soap --enable-soap \
-    && docker-php-ext-configure opcache --enable-opcache \
-    && docker-php-ext-install -j$(nproc) \
+    && docker-php-ext-configure opcache --enable-opcache
+
+RUN docker-php-ext-install -j$(nproc) \
         zip \
         gd \
         bcmath \
@@ -77,7 +74,6 @@ RUN set -xe \
         mysqli \
         pdo_mysql \
         pdo_pgsql \
-        mbstring \
         soap \
         iconv \
         bz2 \
@@ -89,7 +85,6 @@ RUN set -xe \
         sysvmsg \
         sysvsem \
         sysvshm \
-        wddx \
         xsl \
         opcache \
     && echo -e "opcache.memory_consumption=128\n\
