@@ -124,14 +124,12 @@ COPY ./etc/php/php-fpm.conf /usr/local/etc/php-fpm.conf
 ENV PATH /scripts:/scripts/aliases:$PATH
 ENV COMPOSER_ALLOW_SUPERUSER 1
 ENV COMPOSER_HOME /home/user
-ENV COMPOSER_VERSION 1.9.0
 RUN set -xe \
     && mkdir -p "$COMPOSER_HOME" \
     # install composer
     && php -r "copy('https://getcomposer.org/installer', '/home/user/composer-setup.php');" \
-    && php /home/user/composer-setup.php --no-ansi --install-dir=/usr/bin --filename=composer --version=$COMPOSER_VERSION \
+    && php /home/user/composer-setup.php --no-ansi --install-dir=/usr/bin --filename=composer \
     && composer --ansi --version --no-interaction \
-    && composer --no-interaction global require 'hirak/prestissimo' \
     && composer clear-cache \
     && rm -rf /home/user/composer-setup.php /home/user/.htaccess \
     # show php info
@@ -151,6 +149,9 @@ RUN if [ ${INSTALL_MEMCACHED} = true ]; then \
     && rm -rf /tmp/* \
     && apk del .memcached-deps \
 ;fi
+
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug
 
 RUN apk del .build-deps
 
